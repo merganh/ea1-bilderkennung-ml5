@@ -671,6 +671,14 @@ async function classifyCard(card) {
 async function loadModel() {
   try {
     globalStatusEl.textContent = "Modell wird geladen (ca. 16 MB, einmalig). Das kann je nach Verbindung wenige Sekunden dauern …";
+    // WebGL-Backend auf manchen Mobile-GPUs (z. B. Pixel/Tensor) liefert kaputte
+    // Tensor-Outputs. CPU ist universell korrekt, MobileNet ist klein genug.
+    try {
+      if (window.ml5 && ml5.tf && ml5.tf.setBackend) {
+        await ml5.tf.setBackend("cpu");
+        await ml5.tf.ready();
+      }
+    } catch (_) { /* Fallback: ml5-Default-Backend */ }
     classifier = await ml5.imageClassifier("MobileNet");
     modelReady = true;
     globalStatusEl.textContent = "Modell geladen. Beispiele werden klassifiziert …";
