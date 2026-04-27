@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>EA 1: Bilderkennung mit ml5</title>
+
+<script src="https://unpkg.com/ml5@1.2.2/dist/ml5.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --soft: #f5f5f5;
+    --primary: #1a1a1a;
+    --primary-dark: #000000;
+    --primary-light: #ededed;
+    --accent: #2a2a2a;
+    --success: #1a1a1a;
+    --success-bg: #f0f0f0;
+    --error: #555555;
+    --error-bg: #f5f5f5;
+    --text: #1a1a1a;
+    --text-muted: #6b6b6b;
+    --border: #d4d4d4;
+    --border-strong: #1a1a1a;
+    --shadow: 0 1px 2px rgba(0,0,0,.05);
+    --shadow-lg: 0 2px 6px rgba(0,0,0,.06);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+  }
+
+  header {
+    background: #1a1a1a;
+    color: #fff;
+    padding: 2.5rem 1.5rem 2rem;
+    border-bottom: 1px solid #000;
+  }
+  header .wrap { max-width: 1080px; margin: 0 auto; }
+  header h1 { margin: 0 0 .35rem; font-size: 1.85rem; font-weight: 600; }
+  header p { margin: 0; opacity: .92; font-size: 1rem; }
+  header .meta {
+    margin-top: 1rem; font-size: .85rem; opacity: .75;
+    display: flex; flex-wrap: wrap; gap: .25rem 1rem;
+  }
+
+  main { max-width: 1080px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  section { margin-bottom: 3rem; }
+
+  h2 {
+    font-size: 1.35rem; margin: 0 0 1rem;
+    padding-bottom: .5rem; border-bottom: 1px solid var(--border);
+  }
+  h2 .num {
+    display: inline-block; background: #1a1a1a; color: #fff;
+    border-radius: 2px; padding: .15rem .55rem; margin-right: .55rem;
+    font-size: .85rem; vertical-align: middle; letter-spacing: .03em;
+  }
+  h3 { font-size: 1.05rem; margin: 1.5rem 0 .8rem; color: var(--text-muted); font-weight: 500; }
+
+  .card {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;
+    background: var(--surface); border-radius: 4px;
+    padding: 1.1rem; margin-bottom: 1.25rem;
+    box-shadow: var(--shadow); border: 1px solid var(--border);
+    border-left-width: 4px;
+  }
+  .card.is-correct { border-left-color: #1a1a1a; }
+  .card.is-wrong   { border-left-color: #1a1a1a; border-left-style: dashed; }
+
+  .card .img-side, .upload-result .img-side { position: relative; min-width: 0; }
+  .card img, .upload-result img {
+    width: 100%; height: auto; max-height: 320px;
+    object-fit: contain; background: #f3f3f3;
+    border-radius: 4px; display: block;
+  }
+  .card .label {
+    margin-top: .55rem; font-size: .9rem; color: var(--text-muted);
+  }
+
+  .badge {
+    position: absolute; top: .5rem; left: .5rem;
+    padding: .25rem .6rem; border-radius: 2px;
+    font-size: .78rem; font-weight: 600; letter-spacing: .03em;
+    text-transform: uppercase;
+  }
+  .badge.is-correct { background: #1a1a1a; color: #fff; }
+  .badge.is-wrong   { background: #fff; color: #1a1a1a; border: 1px solid #1a1a1a; }
+
+  .chart-side {
+    display: flex; flex-direction: column;
+    min-height: 240px;
+  }
+  .chart-wrap { flex: 1; position: relative; min-height: 220px; }
+  .chart-status {
+    font-size: .82rem; color: var(--text-muted);
+    margin-top: .5rem; min-height: 1.2em;
+  }
+  .chart-status.is-error { color: var(--error); }
+
+  /* Upload */
+  .upload-box {
+    background: var(--surface); border-radius: 8px;
+    padding: 1.25rem; box-shadow: var(--shadow);
+  }
+  .dropzone {
+    border: 2px dashed var(--border); border-radius: 4px;
+    padding: 2rem 1rem; text-align: center;
+    color: var(--text-muted); cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .dropzone:hover, .dropzone.is-drag {
+    background: var(--soft); border-color: #1a1a1a;
+    color: #1a1a1a;
+  }
+  .dropzone strong { color: #1a1a1a; text-decoration: underline; }
+  .dropzone:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 2px; }
+  .dropzone-hint { font-size: .85rem; margin-top: .5rem; }
+
+  .upload-error {
+    color: #1a1a1a; background: var(--soft);
+    border-left: 3px solid #1a1a1a;
+    padding: .5rem .75rem; border-radius: 0;
+    margin-top: .75rem; font-size: .9rem;
+    display: none;
+  }
+  .upload-error.is-shown { display: block; }
+
+  .upload-result {
+    display: none; margin-top: 1.25rem;
+    grid-template-columns: 1fr 1fr; gap: 1.25rem;
+  }
+  .upload-result.is-shown { display: grid; }
+  .upload-result > * { min-width: 0; }
+
+  .btn {
+    display: inline-block; padding: .55rem 1.1rem;
+    background: #1a1a1a; color: #fff;
+    border: 1px solid #1a1a1a; border-radius: 2px;
+    font-size: .95rem; font-weight: 500; cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .btn:hover { background: #fff; color: #1a1a1a; }
+  .btn:disabled {
+    background: #fff; color: var(--text-muted); border-color: var(--border);
+    cursor: not-allowed;
+  }
+
+  .global-status {
+    background: var(--soft); color: var(--text);
+    border-left: 3px solid #1a1a1a;
+    padding: .65rem 1rem; border-radius: 0;
+    font-size: .9rem; margin-bottom: 1.25rem;
+  }
+  .global-status.is-ready { display: none; }
+
+  .prose { max-width: 740px; }
+  .prose p { margin: 0 0 .75rem; }
+  .prose ul { padding-left: 1.4rem; margin: 0 0 1rem; }
+  .prose li { margin-bottom: .35rem; }
+  .prose a { color: #1a1a1a; text-decoration-thickness: 1px; }
+  .prose a:hover { text-decoration-thickness: 2px; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 1.5rem;
+    font-size: .85rem; color: var(--text-muted);
+  }
+  footer ul { padding-left: 1.4rem; }
+
+  /* Mobile */
+  @media (max-width: 720px) {
+    .card, .upload-result.is-shown { grid-template-columns: 1fr; }
+    header h1 { font-size: 1.5rem; }
+    main { padding: 1.5rem 1rem 3rem; }
+  }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  /* Kontextsensitive Hilfe (ISO 9241‑110, Lernförderlichkeit) */
+  .help {
+    position: relative; display: inline-block;
+    margin-left: .5rem; vertical-align: middle;
+  }
+  .help-btn {
+    width: 1.4rem; height: 1.4rem; padding: 0;
+    border: 1px solid var(--border-strong); background: #fff;
+    color: var(--text); border-radius: 50%;
+    font-size: .8rem; font-weight: 600;
+    cursor: help; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .help-btn:hover, .help-btn:focus-visible {
+    background: var(--text); color: #fff;
+    outline: none;
+  }
+  .help-popover {
+    display: none; position: absolute;
+    top: calc(100% + .35rem); left: 50%; transform: translateX(-50%);
+    width: min(320px, 80vw);
+    background: #fff; color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: 4px;
+    padding: .7rem .85rem; font-size: .85rem; line-height: 1.45;
+    box-shadow: var(--shadow-lg); z-index: 10;
+    text-align: left; font-weight: normal;
+  }
+  .help-popover::before {
+    content: ""; position: absolute;
+    top: -7px; left: 50%; transform: translateX(-50%) rotate(45deg);
+    width: 12px; height: 12px;
+    background: #fff; border-left: 1px solid var(--border-strong); border-top: 1px solid var(--border-strong);
+  }
+  .help.is-open .help-popover { display: block; }
+  .help-popover h4 {
+    margin: 0 0 .35rem; font-size: .9rem; font-weight: 600;
+  }
+  .help-popover p { margin: 0 0 .35rem; }
+  .help-popover p:last-child { margin-bottom: 0; }
+  .help-popover kbd {
+    display: inline-block; padding: .05rem .35rem;
+    background: var(--soft); border: 1px solid var(--border);
+    border-radius: 3px; font-size: .78rem;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+
+  /* Top‑1 Hervorhebung in Status */
+  .status-top {
+    font-weight: 600; color: var(--text);
+  }
+  .status-expected {
+    display: block; margin-top: .15rem;
+    font-size: .78rem; color: var(--text-muted);
+  }
+
+  /* Lade-Skeleton für Diagramme */
+  .chart-skeleton {
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, #f5f5f5 25%, #ececec 50%, #f5f5f5 75%);
+    background-size: 200% 100%;
+    animation: skeleton 1.4s linear infinite;
+    border-radius: 4px;
+  }
+  @keyframes skeleton {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>EA 1: Bilderkennung mit ml5</h1>
+    <p>Vortrainiertes MobileNet im Browser, sechs Beispiele plus eigener Upload.</p>
+    <div class="meta">
+      <span>Hamid Mergan</span>
+      <span>TH Lübeck</span>
+      <span>Sommersemester 2026</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div id="globalStatus" class="global-status" role="status" aria-live="polite">
+    Modell wird geladen …
+  </div>
+
+  <section aria-labelledby="a1">
+    <h2 id="a1"><span class="num">A1</span>Beispielbilder
+      <span class="help" data-help="a1">
+        <button type="button" class="help-btn" aria-label="Hilfe zu Abschnitt A1" aria-expanded="false" aria-controls="help-a1">?</button>
+        <span class="help-popover" id="help-a1" role="tooltip">
+          <h4>Was siehst du hier?</h4>
+          <p>Sechs vorausgewählte Bilder werden direkt nach dem Modell‑Laden klassifiziert.
+          Links das Bild, rechts ein Top‑5‑Diagramm der Confidence in Prozent.</p>
+          <p>Die ersten drei sind Beispiele, bei denen ich eine korrekte Klassifikation
+          erwarte. Die unteren drei zeigen typische Schwachstellen des Modells.</p>
+          <p>Erkennbar an Strichart und Badge: durchgezogen + ✓ = korrekt, gestrichelt + ✗ = falsch.</p>
+        </span>
+      </span>
+    </h2>
+
+    <p class="prose">
+      Ich habe sechs Bilder ausgewählt: drei davon werden vom MobileNet so klassifiziert,
+      wie ich es erwartet habe, drei werden falsch erkannt. Pro Bild zeige ich rechts
+      die Top‑5‑Vorhersagen mit der jeweiligen Wahrscheinlichkeit.
+    </p>
+
+    <h3>Korrekt klassifiziert</h3>
+    <div id="correctList"></div>
+
+    <h3>Falsch klassifiziert</h3>
+    <div id="wrongList"></div>
+  </section>
+
+  <section aria-labelledby="a2">
+    <h2 id="a2"><span class="num">A2</span>Eigenes Bild hochladen
+      <span class="help" data-help="a2">
+        <button type="button" class="help-btn" aria-label="Hilfe zu Abschnitt A2" aria-expanded="false" aria-controls="help-a2">?</button>
+        <span class="help-popover" id="help-a2" role="tooltip">
+          <h4>So funktioniert der Upload</h4>
+          <p><strong>Bild wählen:</strong> in den Bereich klicken, oder per Drag‑and‑Drop ablegen,
+          oder per Tastatur mit <kbd>Tab</kbd> fokussieren und <kbd>Enter</kbd> drücken.</p>
+          <p><strong>Erlaubte Formate:</strong> JPEG, PNG, WebP, GIF, max. 10 MB.</p>
+          <p><strong>Klassifizieren:</strong> nach der Vorschau auf den Button klicken oder
+          <kbd>Strg</kbd>+<kbd>Enter</kbd> drücken. Berechnung läuft lokal im Browser,
+          dein Bild wird nicht hochgeladen.</p>
+        </span>
+      </span>
+    </h2>
+
+    <p class="prose">
+      Ein Bild auswählen oder per Drag‑and‑Drop ablegen. Erlaubt sind JPEG, PNG, WebP
+      und GIF. Nach der Vorschau lässt sich die Klassifikation starten.
+    </p>
+
+    <div class="upload-box">
+      <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Bild auswählen oder per Drag-and-Drop ablegen">
+        <div>Bild hierher ziehen oder <strong>auswählen</strong></div>
+        <div class="dropzone-hint">JPEG, PNG, WebP oder GIF, maximal etwa 10 MB</div>
+      </div>
+      <input type="file" id="fileInput" class="sr-only" accept="image/jpeg,image/png,image/webp,image/gif">
+
+      <div id="uploadError" class="upload-error" role="alert"></div>
+
+      <div id="uploadResult" class="upload-result">
+        <div class="img-side">
+          <img id="uploadPreview" alt="Hochgeladenes Bild">
+          <div class="label" id="uploadLabel"></div>
+          <div style="margin-top:.7rem">
+            <button id="classifyBtn" class="btn" disabled>Klassifizieren</button>
+          </div>
+        </div>
+        <div class="chart-side">
+          <div class="chart-wrap"><canvas id="uploadChart"></canvas></div>
+          <div class="chart-status" id="uploadStatus"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="diskussion">
+    <h2 id="diskussion">Diskussion</h2>
+    <div class="prose">
+      <p>
+        Bei den drei „klaren" Fotos liefert MobileNet das, was ich erwartet habe:
+        Golden Retriever, Tabby‑Katze und Banane bekommen jeweils einen sehr hohen
+        Confidence‑Wert. Das Modell wurde auf ImageNet trainiert, das genau solche
+        Alltagsfotos in großer Zahl enthält: fotorealistisch, freigestellt, gut
+        beleuchtet.
+      </p>
+      <p>
+        Spannender ist der Blick auf die Fehlklassifikationen. Beim blauen
+        Plüschhund landet als Top‑1 nicht etwa irgendeine Hunderasse, sondern
+        „teddy". Der Algorithmus geht offensichtlich nicht primär über die Form,
+        sondern über Textur und Farbe. Plüschiges Material plus untypische Farbe
+        führen ihn dorthin, wo ähnliche Trainingsbilder lagen, und das ist nun
+        einmal das Teddybär‑Material. Ein schönes Beispiel dafür, wie stark
+        Oberflächeneigenschaften die Klassifikation prägen.
+      </p>
+      <p>
+        Beim modernen Smartphone schlägt der Zeitversatz durch: ImageNet ist von
+        2009–2012, ein iPhone der jüngeren Generation passt visuell eher zu „iPod"
+        als zu „cellular telephone". Die Klasse existiert, das konkrete Aussehen ist
+        aber zu neu. Bei der halbierten Avocado wiederum verwirren Form und Farbe
+        des Kerns das Modell. Der runde, dunkle Kern erinnert visuell an eine
+        Billardkugel oder einen Granatapfel, und genau das landet oft in den Top‑5.
+      </p>
+      <p>
+        Was ich daraus mitnehme: Das Modell ist verblüffend gut, sobald die
+        Eingabe in seinem Trainingsbereich liegt, und es scheitert sehr direkt,
+        sobald die Eingabe daneben liegt. Die Confidence allein ist dabei kein
+        zuverlässiges Maß; manche Fehlklassifikationen kommen mit überraschend
+        hohen Werten. Für Anwendungen heißt das: ein vortrainiertes
+        General‑Purpose‑Modell wie MobileNet ist ein guter Startpunkt, ersetzt
+        aber kein Fine‑Tuning auf Daten aus der Zieldomäne, sobald die
+        Klassen oder die Bildeigenschaften relevant von ImageNet abweichen.
+      </p>
+    </div>
+  </section>
+
+  <section aria-labelledby="doku">
+    <h2 id="doku">Dokumentation</h2>
+
+    <h3>Technische Umsetzung</h3>
+    <div class="prose">
+      <p>
+        Die Anwendung ist eine einzige <code>index.html</code>‑Datei ohne Build‑Schritt
+        und ohne Framework. Eingebunden sind über CDN nur zwei Bibliotheken:
+      </p>
+      <ul>
+        <li>
+          <strong>ml5.js 1.2.2</strong>: eine Wrapper‑Bibliothek über TensorFlow.js,
+          die das MobileNet‑Modell direkt im Browser ausführt. Aufgerufen wird sie
+          mit <code>ml5.imageClassifier('MobileNet')</code>; klassifiziert wird mit
+          <code>classifier.classify(imgEl, 5)</code>, was eine Liste der Top‑5‑Klassen
+          mit Confidence zurückliefert. Die Modellgewichte zieht ml5 selbst von Google,
+          eine Backend‑Komponente meinerseits gibt es nicht.
+        </li>
+        <li>
+          <strong>Chart.js 4.4.7</strong>: für die Confidence‑Diagramme. Ich verwende
+          horizontale Balkendiagramme, weil die Klassennamen auf der y‑Achse besser
+          lesbar sind als gedreht unter einer x‑Achse. Die Werte sind in Prozent
+          mit einer Nachkommastelle ausgewiesen.
+        </li>
+      </ul>
+      <p>
+        Die Gestaltung ist bewusst monochrom gehalten: schwarzer Header,
+        weißer Karten‑Hintergrund mit leichtem Schatten und klare Typografie.
+        Korrekt und falsch klassifizierte Beispiele werden nicht über Farben
+        unterschieden, sondern über die Strichart des linken Karten‑Akzents
+        (durchgezogen vs. gestrichelt) und ein zusätzliches Badge mit
+        Symbol (✓ bzw. ✗) im Bild. Das hat den Vorteil, dass die
+        Unterscheidung auch bei Rot‑Grün‑Schwäche funktioniert. Das
+        Zwei‑Spalten‑Layout (Bild links, Diagramm rechts) bricht auf Mobilgeräten
+        unter 720 px in eine Spalte um.
+      </p>
+      <p>
+        Beim Bild‑Upload prüfe ich den MIME‑Typ; alles außer JPEG, PNG, WebP und
+        GIF wird mit einer Fehlermeldung abgewiesen. Während Modell und
+        Klassifikation laufen, sind die Statusmeldungen oben bzw. unter den
+        Diagrammen aktiv (ISO 9241‑110, Punkt „Selbstbeschreibungsfähigkeit" und
+        „Erwartungskonformität"); der Klassifizieren‑Button bleibt so lange
+        deaktiviert, bis das Modell geladen ist.
+      </p>
+      <p>
+        Zur kontextsensitiven Hilfe (ISO 9241‑110, „Lernförderlichkeit") gibt es
+        neben den Überschriften A1 und A2 jeweils einen kleinen Hilfe‑Knopf
+        (?). Beim Klick öffnet sich ein Popover, das den jeweiligen Abschnitt
+        kurz erklärt: was zu sehen ist, welche Eingaben möglich sind und welche
+        Tastenkürzel zur Verfügung stehen. Die Popover lassen sich per Klick
+        außerhalb oder über Escape wieder schließen, sind über <code>aria-expanded</code>
+        und <code>role="tooltip"</code> auch für Screenreader nutzbar.
+      </p>
+      <p>
+        Für häufige Nutzer:innen ist die Klassifikation zusätzlich über
+        <code>Strg</code>+<code>Enter</code> auslösbar (Steuerbarkeit nach
+        ISO 9241‑110). Beim Lade-Vorgang sehen die Diagramm‑Bereiche eine
+        Skeleton‑Animation, damit klar ist, wo die Ergebnisse erscheinen werden
+        (Erwartungskonformität). Bei den falsch klassifizierten Beispielen wird
+        unter dem Top‑1 jeweils auch die erwartete Klasse ausgewiesen, damit der
+        Vergleich sofort sichtbar ist.
+      </p>
+    </div>
+
+    <h3>Fachliche Logik und Ansatz</h3>
+    <div class="prose">
+      <p>
+        Das vortrainierte MobileNet ist ein Convolutional Neural Network mit ca.
+        4,2 Millionen Parametern, trainiert auf den 1000 Klassen des ImageNet
+        Large Scale Visual Recognition Challenge. Es liefert für ein Eingabebild
+        eine Wahrscheinlichkeitsverteilung über alle Klassen, ml5 gibt davon die
+        Top‑k zurück.
+      </p>
+      <p>
+        Für A1 habe ich die Bilder bewusst so gewählt, dass jede der drei
+        Fehlklassifikationen einen anderen typischen Schwachpunkt sichtbar macht:
+        Textur‑/Material‑Shift (Plüschhund statt echter Hund), Out‑of‑Distribution
+        durch zeitlichen Versatz (Smartphone‑Generation, die nicht im Trainingsset
+        vorkam) und visuelle Ambiguität (halbierte Avocado).
+        Für A2 sollen Studierende oder Korrektor:innen die Klassifikation am
+        eigenen Material nachvollziehen können. Drag‑and‑Drop fühlt sich auf
+        Desktop natürlicher an, der Datei‑Dialog ist die Fallback‑Option für
+        Geräte ohne Drag‑and‑Drop.
+      </p>
+      <p>
+        Quellen, die ich verwendet habe:
+      </p>
+      <ul>
+        <li>ml5.js, <a href="https://docs.ml5js.org/" target="_blank" rel="noopener">docs.ml5js.org</a>, insbesondere die Image‑Classifier‑Referenz</li>
+        <li>Howard et al., „MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications", arXiv:1704.04861, 2017</li>
+        <li>Russakovsky et al., „ImageNet Large Scale Visual Recognition Challenge", IJCV 2015</li>
+        <li>Chart.js Doku, <a href="https://www.chartjs.org/docs/latest/" target="_blank" rel="noopener">chartjs.org/docs/latest</a></li>
+        <li>Bilder: Unsplash (siehe Bildquellen unten)</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <h3 style="margin-top:0">Bildquellen</h3>
+    <ul>
+      <li>Hund (Foto): Joanna Huang via Unsplash, <a href="https://images.unsplash.com/photo-1597205819209-a999c84568d9" target="_blank" rel="noopener">Bildquelle</a></li>
+      <li>Katze (Foto): Trà My via Unsplash, <a href="https://images.unsplash.com/photo-1627454810279-a04dcf915df7" target="_blank" rel="noopener">Bildquelle</a></li>
+      <li>Banane (Foto): Mockup Graphics via Unsplash, <a href="https://images.unsplash.com/photo-1587132137056-bfbf0166836e" target="_blank" rel="noopener">Bildquelle</a></li>
+      <li>Plüschhund: Vikram Singh via Unsplash, <a href="https://images.unsplash.com/photo-1759990639053-80b6c7acb10b" target="_blank" rel="noopener">Bildquelle</a></li>
+      <li>Smartphone: Selwyn van Haaren via Unsplash, <a href="https://images.unsplash.com/photo-1524466302651-a98b8b02c497" target="_blank" rel="noopener">Bildquelle</a></li>
+      <li>Avocado: Thought Catalog via Unsplash, <a href="https://images.unsplash.com/photo-1519162808019-7de1683fa2ad" target="_blank" rel="noopener">Bildquelle</a></li>
+    </ul>
+  </footer>
+
+</main>
+
+<script>
+"use strict";
+
+// ---------- Beispielbilder ----------
+const correctImages = [
+  { src: "images/hund.jpg",   caption: "Golden Retriever, Foto",       expected: "golden retriever" },
+  { src: "images/katze.jpg",  caption: "Getigerte Katze, Foto",         expected: "tabby" },
+  { src: "images/banane.jpg", caption: "Banane, freigestelltes Foto",   expected: "banana" }
+];
+
+const wrongImages = [
+  { src: "images/pluesch-hund.jpg", caption: "Plüschhund (Stofftier), Domain‑Shift", expected: "Hunderasse (z. B. labrador retriever)", hint: "Form ist hundeähnlich, Textur und Farbe nicht; das Modell entscheidet sich nach Textur." },
+  { src: "images/smartphone.jpg",   caption: "Modernes Smartphone, Time‑Shift",     expected: "cellular telephone", hint: "ImageNet ist von 2009 bis 2012; aktuelle iPhone‑Designs fehlen dort." },
+  { src: "images/avocado.jpg",      caption: "Halbierte Avocado mit Kern",         expected: "Avocado (nicht in ImageNet‑1000)", hint: "Form und Farbe des Kerns ähneln visuell einer Billardkugel oder einem Granatapfel." }
+];
+
+// ---------- Globale Zustände ----------
+let classifier = null;
+let modelReady = false;
+const globalStatusEl = document.getElementById("globalStatus");
+
+// ---------- Beispielkarten rendern ----------
+function buildCard(item, kind) {
+  const card = document.createElement("div");
+  card.className = "card " + (kind === "correct" ? "is-correct" : "is-wrong");
+
+  const imgSide = document.createElement("div");
+  imgSide.className = "img-side";
+  imgSide.innerHTML = `
+    <span class="badge ${kind === "correct" ? "is-correct" : "is-wrong"}">
+      ${kind === "correct" ? "✓ richtig" : "✗ falsch"}
+    </span>
+    <img src="${item.src}" alt="${item.caption}">
+    <div class="label">${item.caption}${item.hint ? "<br><span style='font-size:.82rem'>" + item.hint + "</span>" : ""}</div>
+  `;
+
+  const chartSide = document.createElement("div");
+  chartSide.className = "chart-side";
+  const chartId = "chart-" + Math.random().toString(36).slice(2, 8);
+  chartSide.innerHTML = `
+    <div class="chart-wrap">
+      <div class="chart-skeleton" aria-hidden="true"></div>
+      <canvas id="${chartId}"></canvas>
+    </div>
+    <div class="chart-status">Wartet auf Modell …</div>
+  `;
+
+  card.appendChild(imgSide);
+  card.appendChild(chartSide);
+
+  card._imgEl     = imgSide.querySelector("img");
+  card._canvasId  = chartId;
+  card._statusEl  = chartSide.querySelector(".chart-status");
+  card._skeletonEl = chartSide.querySelector(".chart-skeleton");
+  card._kind      = kind;
+  card._expected  = item.expected || "";
+  return card;
+}
+
+const correctListEl = document.getElementById("correctList");
+const wrongListEl   = document.getElementById("wrongList");
+const allCards = [];
+correctImages.forEach(it => { const c = buildCard(it, "correct"); correctListEl.appendChild(c); allCards.push(c); });
+wrongImages.forEach(it   => { const c = buildCard(it, "wrong");   wrongListEl.appendChild(c);   allCards.push(c); });
+
+// ---------- Chart.js Helfer ----------
+function renderChart(canvasId, results) {
+  const labels = results.map(r => r.label.split(",")[0].trim());
+  const values = results.map(r => +(r.confidence * 100).toFixed(1));
+  const colors = values.map((_, i) => i === 0 ? "#1a1a1a" : "#bdbdbd");
+
+  return new Chart(document.getElementById(canvasId), {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{ data: values, backgroundColor: colors, borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.x + " %" } }
+      },
+      scales: {
+        x: { beginAtZero: true, max: 100, ticks: { callback: v => v + " %" } },
+        y: { ticks: { autoSkip: false } }
+      }
+    }
+  });
+}
+
+// ---------- Bild klassifizieren ----------
+async function classifyCard(card) {
+  card._statusEl.textContent = "Klassifiziere …";
+  try {
+    if (!card._imgEl.complete) {
+      await new Promise((res, rej) => {
+        card._imgEl.addEventListener("load",  res, { once: true });
+        card._imgEl.addEventListener("error", () => rej(new Error("Bild konnte nicht geladen werden.")), { once: true });
+      });
+    }
+    const results = await classifier.classify(card._imgEl, 5);
+    renderChart(card._canvasId, results);
+    if (card._skeletonEl) card._skeletonEl.remove();
+
+    const top1     = results[0].label.split(",")[0].trim();
+    const top1Pct  = (results[0].confidence * 100).toFixed(1) + " %";
+    let html = `<span class="status-top">Top‑1: ${top1}</span> (${top1Pct})`;
+    if (card._expected) {
+      html += `<span class="status-expected">Erwartet: ${card._expected}</span>`;
+    }
+    card._statusEl.innerHTML = html;
+  } catch (err) {
+    if (card._skeletonEl) card._skeletonEl.remove();
+    card._statusEl.textContent = "Fehler: " + err.message;
+    card._statusEl.classList.add("is-error");
+  }
+}
+
+// ---------- Modell laden ----------
+async function loadModel() {
+  try {
+    globalStatusEl.textContent = "Modell wird geladen (ca. 16 MB, einmalig). Das kann je nach Verbindung wenige Sekunden dauern …";
+    classifier = await ml5.imageClassifier("MobileNet");
+    modelReady = true;
+    globalStatusEl.textContent = "Modell geladen. Beispiele werden klassifiziert …";
+    let done = 0;
+    for (const card of allCards) {
+      await classifyCard(card);
+      done++;
+      globalStatusEl.textContent = `Modell geladen. Beispiele werden klassifiziert … (${done}/${allCards.length})`;
+    }
+    globalStatusEl.textContent = "Fertig. Eigenes Bild kann jetzt hochgeladen werden.";
+    globalStatusEl.classList.add("is-ready");
+    classifyBtn.disabled = !pendingUploadImg;
+    if (pendingUploadImg) {
+      uploadStatus.textContent = "Bereit. Auf Klassifizieren klicken oder Strg+Enter drücken.";
+    }
+  } catch (err) {
+    globalStatusEl.textContent = "Modell konnte nicht geladen werden: " + err.message + ". Bitte Seite neu laden oder Internetverbindung prüfen.";
+    globalStatusEl.style.background = "var(--error-bg)";
+    globalStatusEl.style.color = "var(--error)";
+  }
+}
+
+// ---------- Upload ----------
+const dropzone     = document.getElementById("dropzone");
+const fileInput    = document.getElementById("fileInput");
+const uploadResult = document.getElementById("uploadResult");
+const uploadPreview = document.getElementById("uploadPreview");
+const uploadLabel  = document.getElementById("uploadLabel");
+const uploadError  = document.getElementById("uploadError");
+const uploadStatus = document.getElementById("uploadStatus");
+const classifyBtn  = document.getElementById("classifyBtn");
+
+let uploadChart = null;
+let pendingUploadImg = null;
+
+const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const maxBytes = 10 * 1024 * 1024;
+
+function showUploadError(msg) {
+  uploadError.textContent = msg;
+  uploadError.classList.add("is-shown");
+}
+function clearUploadError() {
+  uploadError.classList.remove("is-shown");
+  uploadError.textContent = "";
+}
+
+function handleFile(file) {
+  clearUploadError();
+  if (!file) return;
+  if (!allowedTypes.includes(file.type)) {
+    showUploadError("Dateiformat " + (file.type || "unbekannt") + " wird nicht unterstützt. Erlaubt sind JPEG, PNG, WebP und GIF.");
+    return;
+  }
+  if (file.size > maxBytes) {
+    showUploadError("Datei ist zu groß (" + (file.size / 1024 / 1024).toFixed(1) + " MB). Maximum sind 10 MB.");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    uploadPreview.src = e.target.result;
+    uploadPreview.onload = () => {
+      pendingUploadImg = uploadPreview;
+      uploadResult.classList.add("is-shown");
+      uploadLabel.textContent = file.name + ", " + (file.size / 1024).toFixed(0) + " kB";
+      uploadStatus.textContent = modelReady
+        ? "Bereit. Auf Klassifizieren klicken oder Strg+Enter drücken."
+        : "Modell lädt noch …";
+      uploadStatus.classList.remove("is-error");
+      classifyBtn.disabled = !modelReady;
+      if (uploadChart) { uploadChart.destroy(); uploadChart = null; }
+    };
+  };
+  reader.onerror = () => showUploadError("Datei konnte nicht gelesen werden.");
+  reader.readAsDataURL(file);
+}
+
+fileInput.addEventListener("change", e => handleFile(e.target.files[0]));
+
+dropzone.addEventListener("click", () => fileInput.click());
+dropzone.addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    fileInput.click();
+  }
+});
+
+["dragenter", "dragover"].forEach(evt => {
+  dropzone.addEventListener(evt, e => {
+    e.preventDefault(); e.stopPropagation();
+    dropzone.classList.add("is-drag");
+  });
+});
+["dragleave", "drop"].forEach(evt => {
+  dropzone.addEventListener(evt, e => {
+    e.preventDefault(); e.stopPropagation();
+    dropzone.classList.remove("is-drag");
+  });
+});
+dropzone.addEventListener("drop", e => {
+  const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+classifyBtn.addEventListener("click", async () => {
+  if (!modelReady || !pendingUploadImg) return;
+  classifyBtn.disabled = true;
+  uploadStatus.textContent = "Klassifiziere …";
+  uploadStatus.classList.remove("is-error");
+  try {
+    const results = await classifier.classify(pendingUploadImg, 5);
+    if (uploadChart) uploadChart.destroy();
+    uploadChart = renderChart("uploadChart", results);
+    uploadStatus.textContent = "Top‑1: " + results[0].label.split(",")[0] +
+      " (" + (results[0].confidence * 100).toFixed(1) + " %)";
+  } catch (err) {
+    uploadStatus.textContent = "Fehler: " + err.message;
+    uploadStatus.classList.add("is-error");
+  } finally {
+    classifyBtn.disabled = false;
+  }
+});
+
+// ---------- Start ----------
+loadModel();
+
+// ---------- Tastatur-Shortcut: Strg+Enter klassifiziert ----------
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    if (!classifyBtn.disabled) {
+      e.preventDefault();
+      classifyBtn.click();
+    }
+  }
+});
+
+// ---------- Kontextsensitive Hilfe ----------
+document.querySelectorAll(".help").forEach(help => {
+  const btn = help.querySelector(".help-btn");
+  const open = () => {
+    document.querySelectorAll(".help.is-open").forEach(h => {
+      if (h !== help) {
+        h.classList.remove("is-open");
+        h.querySelector(".help-btn").setAttribute("aria-expanded", "false");
+      }
+    });
+    help.classList.toggle("is-open");
+    btn.setAttribute("aria-expanded", help.classList.contains("is-open") ? "true" : "false");
+  };
+  btn.addEventListener("click", e => { e.stopPropagation(); open(); });
+  btn.addEventListener("keydown", e => {
+    if (e.key === "Escape" && help.classList.contains("is-open")) {
+      help.classList.remove("is-open");
+      btn.setAttribute("aria-expanded", "false");
+    }
+  });
+});
+// Klick außerhalb schließt offene Popover
+document.addEventListener("click", e => {
+  if (!e.target.closest(".help")) {
+    document.querySelectorAll(".help.is-open").forEach(h => {
+      h.classList.remove("is-open");
+      h.querySelector(".help-btn").setAttribute("aria-expanded", "false");
+    });
+  }
+});
+// Escape global schließt Popover
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    document.querySelectorAll(".help.is-open").forEach(h => {
+      h.classList.remove("is-open");
+      h.querySelector(".help-btn").setAttribute("aria-expanded", "false");
+    });
+  }
+});
+</script>
+</body>
+</html>
