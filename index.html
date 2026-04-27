@@ -18,10 +18,10 @@
     --primary-dark: #000000;
     --primary-light: #ededed;
     --accent: #2a2a2a;
-    --success: #1a1a1a;
-    --success-bg: #f0f0f0;
-    --error: #555555;
-    --error-bg: #f5f5f5;
+    --success: #2e7d32;
+    --success-bg: #e8f5e9;
+    --error: #c62828;
+    --error-bg: #ffebee;
     --text: #1a1a1a;
     --text-muted: #6b6b6b;
     --border: #d4d4d4;
@@ -76,8 +76,8 @@
     box-shadow: var(--shadow); border: 1px solid var(--border);
     border-left-width: 4px;
   }
-  .card.is-correct { border-left-color: #1a1a1a; }
-  .card.is-wrong   { border-left-color: #1a1a1a; border-left-style: dashed; }
+  .card.is-correct { border-left-color: var(--success); }
+  .card.is-wrong   { border-left-color: var(--error); }
 
   .card .img-side, .upload-result .img-side { position: relative; min-width: 0; }
   .card img, .upload-result img {
@@ -95,8 +95,8 @@
     font-size: .78rem; font-weight: 600; letter-spacing: .03em;
     text-transform: uppercase;
   }
-  .badge.is-correct { background: #1a1a1a; color: #fff; }
-  .badge.is-wrong   { background: #fff; color: #1a1a1a; border: 1px solid #1a1a1a; }
+  .badge.is-correct { background: var(--success); color: #fff; }
+  .badge.is-wrong   { background: var(--error); color: #fff; }
 
   .chart-side {
     display: flex; flex-direction: column;
@@ -129,8 +129,8 @@
   .dropzone-hint { font-size: .85rem; margin-top: .5rem; }
 
   .upload-error {
-    color: #1a1a1a; background: var(--soft);
-    border-left: 3px solid #1a1a1a;
+    color: var(--error); background: var(--error-bg);
+    border-left: 3px solid var(--error);
     padding: .5rem .75rem; border-radius: 0;
     margin-top: .75rem; font-size: .9rem;
     display: none;
@@ -291,7 +291,7 @@
           Links das Bild, rechts ein Top‑5‑Diagramm der Confidence in Prozent.</p>
           <p>Die ersten drei sind Beispiele, bei denen ich eine korrekte Klassifikation
           erwarte. Die unteren drei zeigen typische Schwachstellen des Modells.</p>
-          <p>Erkennbar an Strichart und Badge: durchgezogen + ✓ = korrekt, gestrichelt + ✗ = falsch.</p>
+          <p>Erkennbar an Farbe und Badge: grün + ✓ = korrekt, rot + ✗ = falsch.</p>
         </span>
       </span>
     </h2>
@@ -318,7 +318,7 @@
           <p><strong>Bild wählen:</strong> in den Bereich klicken, oder per Drag‑and‑Drop ablegen,
           oder per Tastatur mit <kbd>Tab</kbd> fokussieren und <kbd>Enter</kbd> drücken.</p>
           <p><strong>Erlaubte Formate:</strong> JPEG, PNG, WebP, GIF, max. 10 MB.</p>
-          <p><strong>Klassifizieren:</strong> nach der Vorschau auf den Button klicken oder
+          <p><strong>Klassifizieren:</strong> nach der Vorschau auf den <em>Classify</em>‑Button klicken oder
           <kbd>Strg</kbd>+<kbd>Enter</kbd> drücken. Berechnung läuft lokal im Browser,
           dein Bild wird nicht hochgeladen.</p>
         </span>
@@ -344,7 +344,7 @@
           <img id="uploadPreview" alt="Hochgeladenes Bild">
           <div class="label" id="uploadLabel"></div>
           <div style="margin-top:.7rem">
-            <button id="classifyBtn" class="btn" disabled>Klassifizieren</button>
+            <button id="classifyBtn" class="btn" disabled>Classify</button>
           </div>
         </div>
         <div class="chart-side">
@@ -359,38 +359,32 @@
     <h2 id="diskussion">Diskussion</h2>
     <div class="prose">
       <p>
-        Bei den drei „klaren" Fotos liefert MobileNet das, was ich erwartet habe:
-        Golden Retriever, Tabby‑Katze und Banane bekommen jeweils einen sehr hohen
-        Confidence‑Wert. Das Modell wurde auf ImageNet trainiert, das genau solche
-        Alltagsfotos in großer Zahl enthält: fotorealistisch, freigestellt, gut
-        beleuchtet.
+        Bei den drei „klaren" Fotos liefert MobileNet plausible Top‑1‑Klassen:
+        Golden Retriever (92 %), Egyptian cat (53 %, optisch fast identisch zu
+        tabby) und Banane (98 %). Das Modell wurde auf ImageNet trainiert, das
+        genau solche fotorealistischen, freigestellten Alltagsfotos in großer
+        Zahl enthält.
       </p>
       <p>
-        Spannender ist der Blick auf die Fehlklassifikationen. Beim blauen
-        Plüschhund landet als Top‑1 nicht etwa irgendeine Hunderasse, sondern
-        „teddy". Der Algorithmus geht offensichtlich nicht primär über die Form,
-        sondern über Textur und Farbe. Plüschiges Material plus untypische Farbe
-        führen ihn dorthin, wo ähnliche Trainingsbilder lagen, und das ist nun
-        einmal das Teddybär‑Material. Ein schönes Beispiel dafür, wie stark
-        Oberflächeneigenschaften die Klassifikation prägen.
+        Spannender sind die Fehlklassifikationen. Beim blauen Plüschhund landet als
+        Top‑1 nicht eine Hunderasse, sondern „teddy": Textur und Farbe schlagen
+        die Form, weil ähnliche Trainingsbilder eben Teddybären sind. Beim
+        modernen Smartphone schlägt der Zeitversatz durch: ImageNet stammt von
+        2009 bis 2012, aktuelle iPhone‑Designs fehlen und passen visuell eher zu „iPod"
+        als zu „cellular telephone". Bei der halbierten Avocado verwirren Form
+        und Farbe des Kerns das Modell, sodass im Top‑5 Feige, Zitrone und
+        Apfel landen (Feige passt wegen der ähnlichen Innenstruktur einer
+        halbierten Frucht).
       </p>
       <p>
-        Beim modernen Smartphone schlägt der Zeitversatz durch: ImageNet ist von
-        2009–2012, ein iPhone der jüngeren Generation passt visuell eher zu „iPod"
-        als zu „cellular telephone". Die Klasse existiert, das konkrete Aussehen ist
-        aber zu neu. Bei der halbierten Avocado wiederum verwirren Form und Farbe
-        des Kerns das Modell. Der runde, dunkle Kern erinnert visuell an eine
-        Billardkugel oder einen Granatapfel, und genau das landet oft in den Top‑5.
-      </p>
-      <p>
-        Was ich daraus mitnehme: Das Modell ist verblüffend gut, sobald die
-        Eingabe in seinem Trainingsbereich liegt, und es scheitert sehr direkt,
-        sobald die Eingabe daneben liegt. Die Confidence allein ist dabei kein
-        zuverlässiges Maß; manche Fehlklassifikationen kommen mit überraschend
-        hohen Werten. Für Anwendungen heißt das: ein vortrainiertes
-        General‑Purpose‑Modell wie MobileNet ist ein guter Startpunkt, ersetzt
-        aber kein Fine‑Tuning auf Daten aus der Zieldomäne, sobald die
-        Klassen oder die Bildeigenschaften relevant von ImageNet abweichen.
+        Auffällig ist, dass die Confidence allein kein zuverlässiges Maß ist:
+        manche Fehlklassifikationen kommen mit überraschend hohen Werten. Insgesamt
+        zeigen die drei Fehlerfälle drei unterschiedliche Schwächen: Material‑Shift,
+        zeitlichen Versatz und visuelle Ambiguität. Das Modell ist also sehr gut,
+        sobald die Eingabe in seinem Trainingsbereich liegt, und scheitert direkt,
+        sobald sie daneben liegt. Für reale Anwendungen heißt das: ein
+        General‑Purpose‑Modell wie MobileNet ist ein guter Startpunkt, ersetzt aber
+        kein Fine‑Tuning auf domänennahen Daten.
       </p>
     </div>
   </section>
@@ -421,22 +415,22 @@
         </li>
       </ul>
       <p>
-        Die Gestaltung ist bewusst monochrom gehalten: schwarzer Header,
-        weißer Karten‑Hintergrund mit leichtem Schatten und klare Typografie.
-        Korrekt und falsch klassifizierte Beispiele werden nicht über Farben
-        unterschieden, sondern über die Strichart des linken Karten‑Akzents
-        (durchgezogen vs. gestrichelt) und ein zusätzliches Badge mit
-        Symbol (✓ bzw. ✗) im Bild. Das hat den Vorteil, dass die
-        Unterscheidung auch bei Rot‑Grün‑Schwäche funktioniert. Das
-        Zwei‑Spalten‑Layout (Bild links, Diagramm rechts) bricht auf Mobilgeräten
-        unter 720 px in eine Spalte um.
+        Die Gestaltung ist überwiegend monochrom mit gezielten semantischen
+        Farbakzenten: Grün (#2e7d32) signalisiert eine korrekte, Rot (#c62828)
+        eine falsche Klassifikation. Damit die Unterscheidung auch bei
+        Rot‑Grün‑Schwäche zuverlässig funktioniert, ist sie zusätzlich redundant
+        codiert über ein Badge mit Symbol (✓ bzw. ✗) direkt im Bild. Die
+        Top‑1‑Klasse im Confidence‑Diagramm wird ebenfalls in der jeweiligen
+        Semantikfarbe hervorgehoben, sodass das Ergebnis auf einen Blick lesbar
+        ist. Das Zwei‑Spalten‑Layout (Bild links, Diagramm rechts) bricht auf
+        Mobilgeräten unter 720 px in eine Spalte um.
       </p>
       <p>
         Beim Bild‑Upload prüfe ich den MIME‑Typ; alles außer JPEG, PNG, WebP und
         GIF wird mit einer Fehlermeldung abgewiesen. Während Modell und
         Klassifikation laufen, sind die Statusmeldungen oben bzw. unter den
         Diagrammen aktiv (ISO 9241‑110, Punkt „Selbstbeschreibungsfähigkeit" und
-        „Erwartungskonformität"); der Klassifizieren‑Button bleibt so lange
+        „Erwartungskonformität"); der <em>Classify</em>‑Button bleibt so lange
         deaktiviert, bis das Modell geladen ist.
       </p>
       <p>
@@ -512,14 +506,14 @@
 // ---------- Beispielbilder ----------
 const correctImages = [
   { src: "images/hund.jpg",   caption: "Golden Retriever, Foto",       expected: "golden retriever" },
-  { src: "images/katze.jpg",  caption: "Getigerte Katze, Foto",         expected: "tabby" },
+  { src: "images/katze.jpg",  caption: "Getigerte Katze, Foto",         expected: "Egyptian cat" },
   { src: "images/banane.jpg", caption: "Banane, freigestelltes Foto",   expected: "banana" }
 ];
 
 const wrongImages = [
   { src: "images/pluesch-hund.jpg", caption: "Plüschhund (Stofftier), Domain‑Shift", expected: "Hunderasse (z. B. labrador retriever)", hint: "Form ist hundeähnlich, Textur und Farbe nicht; das Modell entscheidet sich nach Textur." },
   { src: "images/smartphone.jpg",   caption: "Modernes Smartphone, Time‑Shift",     expected: "cellular telephone", hint: "ImageNet ist von 2009 bis 2012; aktuelle iPhone‑Designs fehlen dort." },
-  { src: "images/avocado.jpg",      caption: "Halbierte Avocado mit Kern",         expected: "Avocado (nicht in ImageNet‑1000)", hint: "Form und Farbe des Kerns ähneln visuell einer Billardkugel oder einem Granatapfel." }
+  { src: "images/avocado.jpg",      caption: "Halbierte Avocado mit Kern",         expected: "Avocado (nicht in ImageNet‑1000)", hint: "Form der halbierten Frucht ähnelt visuell einer halbierten Feige, Zitrone oder einem Apfel." }
 ];
 
 // ---------- Globale Zustände ----------
@@ -572,10 +566,46 @@ correctImages.forEach(it => { const c = buildCard(it, "correct"); correctListEl.
 wrongImages.forEach(it   => { const c = buildCard(it, "wrong");   wrongListEl.appendChild(c);   allCards.push(c); });
 
 // ---------- Chart.js Helfer ----------
-function renderChart(canvasId, results) {
+// Inline-Plugin: Schreibt die Confidence in Prozent als Datenlabel an jeden Balken.
+// Bei Werten ab 18 % wird das Label rechtsbündig in den Balken gesetzt (weiß),
+// darunter rechts neben den Balken (dunkel). Damit erfüllen wir die
+// Aufgaben-Vorgabe „Zahlenwerte der Confidence in Prozent im Diagramm".
+const dataLabelsPlugin = {
+  id: "inlineDataLabels",
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((dataset, dsIdx) => {
+      const meta = chart.getDatasetMeta(dsIdx);
+      meta.data.forEach((bar, i) => {
+        const value = dataset.data[i];
+        if (value == null) return;
+        const text = value.toFixed(1) + " %";
+        ctx.save();
+        ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textBaseline = "middle";
+        if (value >= 18) {
+          ctx.fillStyle = "#fff";
+          ctx.textAlign = "right";
+          ctx.fillText(text, bar.x - 6, bar.y);
+        } else {
+          ctx.fillStyle = "#1a1a1a";
+          ctx.textAlign = "left";
+          ctx.fillText(text, bar.x + 6, bar.y);
+        }
+        ctx.restore();
+      });
+    });
+  }
+};
+
+function renderChart(canvasId, results, kind) {
   const labels = results.map(r => r.label.split(",")[0].trim());
   const values = results.map(r => +(r.confidence * 100).toFixed(1));
-  const colors = values.map((_, i) => i === 0 ? "#1a1a1a" : "#bdbdbd");
+  const top1Color =
+    kind === "correct" ? "#2e7d32" :
+    kind === "wrong"   ? "#c62828" :
+                         "#1a1a1a";
+  const colors = values.map((_, i) => i === 0 ? top1Color : "#bdbdbd");
 
   return new Chart(document.getElementById(canvasId), {
     type: "bar",
@@ -587,6 +617,7 @@ function renderChart(canvasId, results) {
       indexAxis: "y",
       responsive: true,
       maintainAspectRatio: false,
+      layout: { padding: { right: 14 } },
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: ctx => ctx.parsed.x + " %" } }
@@ -595,7 +626,8 @@ function renderChart(canvasId, results) {
         x: { beginAtZero: true, max: 100, ticks: { callback: v => v + " %" } },
         y: { ticks: { autoSkip: false } }
       }
-    }
+    },
+    plugins: [dataLabelsPlugin]
   });
 }
 
@@ -610,7 +642,7 @@ async function classifyCard(card) {
       });
     }
     const results = await classifier.classify(card._imgEl, 5);
-    renderChart(card._canvasId, results);
+    renderChart(card._canvasId, results, card._kind);
     if (card._skeletonEl) card._skeletonEl.remove();
 
     const top1     = results[0].label.split(",")[0].trim();
@@ -644,7 +676,7 @@ async function loadModel() {
     globalStatusEl.classList.add("is-ready");
     classifyBtn.disabled = !pendingUploadImg;
     if (pendingUploadImg) {
-      uploadStatus.textContent = "Bereit. Auf Klassifizieren klicken oder Strg+Enter drücken.";
+      uploadStatus.textContent = "Bereit. Auf Classify klicken oder Strg+Enter drücken.";
     }
   } catch (err) {
     globalStatusEl.textContent = "Modell konnte nicht geladen werden: " + err.message + ". Bitte Seite neu laden oder Internetverbindung prüfen.";
@@ -698,7 +730,7 @@ function handleFile(file) {
       uploadResult.classList.add("is-shown");
       uploadLabel.textContent = file.name + ", " + (file.size / 1024).toFixed(0) + " kB";
       uploadStatus.textContent = modelReady
-        ? "Bereit. Auf Klassifizieren klicken oder Strg+Enter drücken."
+        ? "Bereit. Auf Classify klicken oder Strg+Enter drücken."
         : "Modell lädt noch …";
       uploadStatus.classList.remove("is-error");
       classifyBtn.disabled = !modelReady;

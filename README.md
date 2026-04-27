@@ -7,20 +7,32 @@ Eine einseitige Web-App, die das vortrainierte MobileNet über
 direkt nach dem Laden klassifiziert; zusätzlich kann ein eigenes Bild per
 Drag-and-Drop oder Datei-Dialog geladen werden.
 
+## Live-Demo
+
+Öffentlich erreichbar unter:
+<https://merganh.github.io/ea1-bilderkennung-ml5/>
+
+## Deployment via GitHub Pages
+
+Im Repo ist ein Workflow unter `.github/workflows/pages.yml` hinterlegt, der die
+Seite bei jedem Push auf `main` automatisch nach GitHub Pages deployt. Einmalige
+Einrichtung im Repo:
+
+1. **Settings → Pages → Build and deployment → Source** auf
+   `GitHub Actions` setzen.
+2. Push auf `main` (oder unter **Actions** den Workflow „Deploy to GitHub Pages"
+   manuell starten).
+3. Nach erfolgreichem Run zeigt der Workflow oben die Live-URL an.
+
 ## Lokal ausführen
 
 Wegen CORS-Restriktionen muss die Seite über einen lokalen Server geöffnet werden,
 nicht über `file://`:
 
 ```bash
-python -m http.server 47823
-# dann im Browser: http://localhost:47823
+python -m http.server 8000
+# dann im Browser: http://localhost:8000
 ```
-
-Hinweis für Windows: Port 8000 (und teilweise auch 8080) ist häufig durch
-Hyper-V / WSL reserviert und führt zu `WinError 10013`. Ein hoher Port wie
-47823 ist in der Regel frei. Welche Ports reserviert sind, lässt sich mit
-`netsh interface ipv4 show excludedportrange protocol=tcp` prüfen.
 
 ## Aufbau
 
