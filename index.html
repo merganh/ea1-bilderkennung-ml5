@@ -634,6 +634,14 @@ function renderChart(canvasId, results, kind) {
 }
 
 // ---------- Bild klassifizieren ----------
+function imgToCanvas(img) {
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  c.getContext("2d").drawImage(img, 0, 0);
+  return c;
+}
+
 async function classifyCard(card) {
   card._statusEl.textContent = "Klassifiziere …";
   try {
@@ -641,7 +649,7 @@ async function classifyCard(card) {
     if (!card._imgEl.naturalWidth) {
       throw new Error("Bild konnte nicht geladen werden.");
     }
-    const results = await classifier.classify(card._imgEl, 5);
+    const results = await classifier.classify(imgToCanvas(card._imgEl), 5);
     renderChart(card._canvasId, results, card._kind);
     if (card._skeletonEl) card._skeletonEl.remove();
 
@@ -775,7 +783,7 @@ classifyBtn.addEventListener("click", async () => {
   uploadStatus.classList.remove("is-error");
   try {
     try { await pendingUploadImg.decode(); } catch (_) { /* fallback */ }
-    const results = await classifier.classify(pendingUploadImg, 5);
+    const results = await classifier.classify(imgToCanvas(pendingUploadImg), 5);
     if (uploadChart) uploadChart.destroy();
     uploadChart = renderChart("uploadChart", results);
     uploadStatus.textContent = "Top‑1: " + results[0].label.split(",")[0] +
