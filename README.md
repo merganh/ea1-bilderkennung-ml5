@@ -38,10 +38,11 @@ python -m http.server 8000
 
 - `index.html`: gesamte Anwendung in einer Datei (HTML, CSS und JS inline)
 - `images/`: die sechs Beispielbilder
+- `vendor/ml5.min.js`: ml5-Library lokal mitausgeliefert
 
 ## Abhängigkeiten
 
-Nur über CDN, kein Build-Schritt:
+Kein Build-Schritt:
 
-- ml5.js 1.2.2
-- Chart.js 4.4.7
+- ml5.js 1.2.2 (lokal in `vendor/`)
+- Chart.js 4.4.7 (über jsDelivr)
