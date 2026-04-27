@@ -636,11 +636,9 @@ function renderChart(canvasId, results, kind) {
 async function classifyCard(card) {
   card._statusEl.textContent = "Klassifiziere …";
   try {
-    if (!card._imgEl.complete) {
-      await new Promise((res, rej) => {
-        card._imgEl.addEventListener("load",  res, { once: true });
-        card._imgEl.addEventListener("error", () => rej(new Error("Bild konnte nicht geladen werden.")), { once: true });
-      });
+    try { await card._imgEl.decode(); } catch (_) { /* fallback unten */ }
+    if (!card._imgEl.naturalWidth) {
+      throw new Error("Bild konnte nicht geladen werden.");
     }
     const results = await classifier.classify(card._imgEl, 5);
     renderChart(card._canvasId, results, card._kind);
@@ -775,6 +773,7 @@ classifyBtn.addEventListener("click", async () => {
   uploadStatus.textContent = "Klassifiziere …";
   uploadStatus.classList.remove("is-error");
   try {
+    try { await pendingUploadImg.decode(); } catch (_) { /* fallback */ }
     const results = await classifier.classify(pendingUploadImg, 5);
     if (uploadChart) uploadChart.destroy();
     uploadChart = renderChart("uploadChart", results);
